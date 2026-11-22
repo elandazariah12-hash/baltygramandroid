@@ -1,13 +1,8 @@
-# Setup and current scope
+# Build setup
 
-- Native Kotlin / Jetpack Compose interface.
-- Home, Explore, search/filter, listing detail, theme toggle.
-- Supabase REST catalogue read scaffold.
-- GitHub Actions workflow builds an APK; Android Studio is not required.
-- No website code or database schema is changed by this project.
+1. Keep this repository's existing GitHub Actions workflow.
+2. Optional repository secrets: `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` (public client key only).
+3. Open Actions → Build BaltyGram Android APK → Run workflow.
+4. Download `baltygram-debug-apk` from the completed run.
 
-## Not implemented yet
-Full sign-up/sign-in, uploads, downloads, offline media, saved-items sync, reviews, notifications, developer profiles, community/chat, push notifications and production release signing. These should be added in stages after verifying the live Supabase schema and RLS policies.
-
-## Supabase schema note
-The starter expects `software` to expose `id`, `name`, `description`, and `category`. If your project stores category IDs or uses different field names, update the REST select and JSON mapping accordingly. Keep the `software-packages` bucket private and do not expose service-role credentials.
+Never store a Supabase service-role key in GitHub Actions or in the Android client.

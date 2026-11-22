@@ -1,17 +1,21 @@
-# BaltyGram Android
+# BaltyGram Native Android
 
-Native Android starter for BaltyGram using Kotlin + Jetpack Compose. It does not use a WebView.
+Kotlin + Jetpack Compose client for BaltyGram, connected to the existing Supabase project. No WebView.
 
-## Build without Android Studio
-1. Create a GitHub repository for this Android project.
-2. Upload the contents of this ZIP (the files inside the folder, not the outer folder if you prefer a clean root).
-3. In GitHub: Settings → Secrets and variables → Actions, add:
-   - `SUPABASE_URL`
-   - `SUPABASE_PUBLISHABLE_KEY`
-4. Open Actions → Build BaltyGram Android APK → Run workflow.
-5. Download the `baltygram-debug-apk` artifact from the completed workflow.
+## Build
+Open Actions → Build BaltyGram Android APK → Run workflow. The workflow uploads `app-debug.apk` as `baltygram-debug-apk`.
 
-Use only your Supabase project URL and public publishable/anon key. Never put a service-role or secret key in an Android app.
+## Security
+The app uses the public Supabase anon key and authenticated user JWTs. Never add a service-role key to this repository or Android app. RLS remains authoritative.
 
-## Important
-This is a native starter foundation, not yet a full feature-for-feature replacement for BaltyGram's website. The current client attempts to read a basic software catalogue. Your live `software` table may use different column names or category relations; adjust the select and mapping in `SupabaseClient.kt` to match your actual schema. It does not change your website or Supabase database.
+## Implemented in this pass
+- Native Home and Explore catalogue with search and type filters
+- Listing details and signed download link flow through `download-file`
+- Supabase email/password sign-in, sign-up, password reset and sign-out
+- Favorites, public community discovery and membership
+- Direct-message inbox and sending, in-app notifications
+- Creator Studio links to the website's existing upload workflow
+- Light/dark theme toggle
+
+## Notes
+The upload workflow remains on the website because it includes file selection, media processing, CAPTCHA and review submission. Push notifications and full background transfer queue require additional platform configuration. The Android build must be verified by GitHub Actions before treating the APK as release-ready.

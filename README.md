@@ -1,21 +1,19 @@
 # BaltyGram Native Android
 
-Kotlin + Jetpack Compose client for BaltyGram, connected to the existing Supabase project. No WebView.
+Kotlin + Jetpack Compose native Android client (no WebView wrapper).
+
+## Navigation
+Four bottom destinations: Home, Explore, Upload and Account. The hamburger drawer contains Categories, Find people, My uploads, Downloads, Saved, Creator Studio, Communities, Messages, Notifications, Organizations, About, Contact and appearance settings.
+
+## Connected features
+- Approved software catalogue, images, categories, search and listing details.
+- Supabase email/password authentication and Google OAuth using the existing Google provider.
+- Saved listings, public communities and membership, direct-message inbox and messages, notifications and download history.
+- Private downloads through the existing `download-file` Edge Function.
+- Upload wizard and some long-form pages currently open the website's existing workflow; a fully native creator upload flow still needs the website's CAPTCHA, storage and review pipeline ported.
+
+## Google OAuth
+Add `site.baltygram.app://auth/callback` to Supabase Authentication → URL Configuration → Redirect URLs. The app uses a PKCE code exchange.
 
 ## Build
-Open Actions → Build BaltyGram Android APK → Run workflow. The workflow uploads `app-debug.apk` as `baltygram-debug-apk`.
-
-## Security
-The app uses the public Supabase anon key and authenticated user JWTs. Never add a service-role key to this repository or Android app. RLS remains authoritative.
-
-## Implemented in this pass
-- Native Home and Explore catalogue with search and type filters
-- Listing details and signed download link flow through `download-file`
-- Supabase email/password sign-in, sign-up, password reset and sign-out
-- Favorites, public community discovery and membership
-- Direct-message inbox and sending, in-app notifications
-- Creator Studio links to the website's existing upload workflow
-- Light/dark theme toggle
-
-## Notes
-The upload workflow remains on the website because it includes file selection, media processing, CAPTCHA and review submission. Push notifications and full background transfer queue require additional platform configuration. The Android build must be verified by GitHub Actions before treating the APK as release-ready.
+GitHub Actions uploads the debug APK as `baltygram-debug-apk`.

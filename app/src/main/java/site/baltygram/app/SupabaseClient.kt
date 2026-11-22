@@ -1,39 +1,56 @@
 package site.baltygram.app
 
+import android.content.Context
+import android.content.SharedPreferences
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
+import org.json.JSONObject
 import java.io.IOException
+import java.net.URLEncoder
+import java.util.concurrent.TimeUnit
 
 object SupabaseClient {
-    // Set these in GitHub Actions repository secrets before building.
-    private const val SUPABASE_URL = BuildConfig.SUPABASE_URL
-    private const val SUPABASE_KEY = BuildConfig.SUPABASE_PUBLISHABLE_KEY
-    private val http = OkHttpClient()
-
-    fun isConfigured() = SUPABASE_URL.isNotBlank() && SUPABASE_KEY.isNotBlank()
-
-    fun fetchSoftware(): List<Listing> {
-        if (!isConfigured()) return emptyList()
-        val url = SUPABASE_URL.trimEnd('/') +
-            "/rest/v1/software?select=id,name,description,category&limit=50"
-        val request = Request.Builder().url(url)
-            .header("apikey", SUPABASE_KEY)
-            .header("Authorization", "Bearer $SUPABASE_KEY")
-            .header("Accept", "application/json")
-            .build()
-        http.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) throw IOException("Supabase returned HTTP ${response.code}. Check table fields and Row Level Security.")
-            val array = JSONArray(response.body?.string() ?: "[]")
-            return (0 until array.length()).map { i ->
-                val obj = array.getJSONObject(i)
-                Listing(
-                    id = obj.optString("id"),
-                    name = obj.optString("name", "Untitled"),
-                    description = obj.optString("description", ""),
-                    category = obj.optString("category", "Other")
-                )
-            }
-        }
-    }
+ private const val BASE="https://atovuyugeqrbfhkpyhax.supabase.co"
+ private const val ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF0b3Z1eXVnZXFyYmZoa3B5aGF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY4MzYxNDAsImV4cCI6MjEwMjQxMjE0MH0.ZCCXf7do_qc0_5B1wvsZM_OPoP1Uo9v3lSyH-SXkDcc"
+ private val http=OkHttpClient.Builder().connectTimeout(20,TimeUnit.SECONDS).readTimeout(45,TimeUnit.SECONDS).build()
+ private lateinit var prefs:SharedPreferences
+ private var access=""; private var refresh=""
+ fun init(ctx:Context){prefs=ctx.getSharedPreferences("bg_session",Context.MODE_PRIVATE);access=prefs.getString("access","")?:"";refresh=prefs.getString("refresh","")?:""}
+ fun token()=access
+ fun email()=prefs.getString("email","")?:""
+ private fun request(path:String,method:String="GET",body:JSONObject?=null,auth:Boolean=true,api:Boolean=true):String{
+  val b=Request.Builder().url(BASE+path).header("apikey",ANON)
+  if(auth && access.isNotBlank()) b.header("Authorization","Bearer $access") else b.header("Authorization","Bearer $ANON")
+  if(api)b.header("Accept","application/json")
+  if(body!=null)b.header("Content-Type","application/json").method(method,body.toString().toRequestBody("application/json".toMediaType()))
+  else if(method!="GET")b.method(method,ByteArray(0).toRequestBody(null))
+  http.newCall(b.build()).execute().use{r->val s=r.body?.string().orEmpty();if(!r.isSuccessful)throw IOException(try{JSONObject(s).optString("message",JSONObject(s).optString("msg",JSONObject(s).optString("error", "HTTP "+r.code)))}catch(_:Exception){"HTTP "+r.code});return s}
+ }
+ private fun enc(s:String)=URLEncoder.encode(s,"UTF-8")
+ private fun saveSession(o:JSONObject){access=o.optString("access_token");refresh=o.optString("refresh_token");val u=o.optJSONObject("user");prefs.edit().putString("access",access).putString("refresh",refresh).putString("email",u?.optString("email")?:"").apply()}
+ fun signIn(email:String,password:String){val o=JSONObject(request("/auth/v1/token?grant_type=password","POST",JSONObject().put("email",email).put("password",password),false));saveSession(o)}
+ fun signUp(name:String,email:String,password:String){request("/auth/v1/signup","POST",JSONObject().put("email",email).put("password",password).put("data",JSONObject().put("full_name",name)),false)}
+ fun resetPassword(email:String){request("/auth/v1/recover","POST",JSONObject().put("email",email),false)}
+ fun signOut(){try{request("/auth/v1/logout","POST",JSONObject())}finally{access="";refresh="";prefs.edit().clear().apply()}}
+ private fun arr(path:String)=JSONArray(request(path))
+ private fun obj(path:String)=JSONObject(request(path))
+ fun listings():List<Listing>{val a=arr("/rest/v1/software?select=id,name,short_description,description,software_type,icon_url,external_url:website_url,software_versions(id,version,external_url)&status=eq.approved&deleted_at=is.null&order=is_featured.desc,created_at.desc&limit=100");return (0 until a.length()).map{i->val x=a.getJSONObject(i);val vs=x.optJSONArray("software_versions");val v=if(vs!=null&&vs.length()>0)vs.getJSONObject(0) else JSONObject();Listing(x.optString("id"),x.optString("name"),x.optString("description",x.optString("short_description")),x.optString("software_type","Other"),x.optString("icon_url"),v.optString("id"),v.optString("external_url"))}}
+ fun categories():List<String>{return try{val a=arr("/rest/v1/categories?select=name&order=name");(0 until a.length()).map{a.getJSONObject(it).optString("name")}}catch(_:Exception){emptyList()}}
+ fun favorites():Set<String>{if(access.isBlank())return emptySet();val a=arr("/rest/v1/favorites?select=software_id");return (0 until a.length()).map{a.getJSONObject(it).optString("software_id")}.toSet()}
+ fun toggleFavorite(id:String,exists:Boolean){if(exists)request("/rest/v1/favorites?software_id=eq.$id","DELETE") else request("/rest/v1/favorites","POST",JSONObject().put("software_id",id))}
+ fun communities():List<Community>{val a=arr("/rest/v1/communities?select=id,name,description&is_active=eq.true&is_public=eq.true&order=name&limit=50");return (0 until a.length()).map{val x=a.getJSONObject(it);Community(x.optString("id"),x.optString("name"),x.optString("description"))}}
+ fun joinCommunity(id:String){request("/rest/v1/community_members","POST",JSONObject().put("community_id",id).put("user_id",userId()).put("role","member"))}
+ private fun userId():String=obj("/auth/v1/user").optString("id")
+ fun notifications():List<Notice>{if(access.isBlank())return emptyList();val a=arr("/rest/v1/notifications?select=id,title,body&order=created_at.desc&limit=30");return (0 until a.length()).map{val x=a.getJSONObject(it);Notice(x.optString("id"),x.optString("title"),x.optString("body"))}}
+ fun inbox():List<JSONObject>{val a=arr("/rest/v1/dm_threads?select=id,user_a,user_b,last_message_at&order=last_message_at.desc&limit=50");return (0 until a.length()).map{a.getJSONObject(it)}}
+ fun messages(id:String):List<JSONObject>{val a=arr("/rest/v1/messages?select=id,body,sender_id,created_at&dm_id=eq.$id&deleted_at=is.null&order=created_at.asc&limit=100");return (0 until a.length()).map{a.getJSONObject(it)}}
+ fun sendMessage(id:String,body:String){request("/rest/v1/messages","POST",JSONObject().put("dm_id",id).put("sender_id",userId()).put("body",body))}
+ fun download(item:Listing):String{if(access.isBlank())throw IOException("Sign in before downloading.")
+  val response=JSONObject(request("/functions/v1/download-file","POST",JSONObject().put("version_id",item.versionId)))
+  if(!response.optBoolean("success"))throw IOException(response.optString("error","Download unavailable"))
+  return response.optString("url").ifBlank{throw IOException("No download URL returned")}
+ }
 }

@@ -204,7 +204,7 @@ fun ListingDetail(item:Listing,saved:Boolean,onBack:()->Unit,onSave:()->Unit,onD
    OutlinedButton(onClick=onSave){Icon(if(saved)Icons.Default.Bookmark else Icons.Default.BookmarkBorder,null);Text(if(saved)"Saved" else "Save")}
    Button(onClick={onDownload(item)}){Icon(Icons.Default.Download,null);Text("Download")}
   }
-  if(item.externalUrl.isNotBlank()) TextButton(onClick={openUrl(item.externalUrl}){Text("Publisher website")}
+  if(item.externalUrl.isNotBlank()) TextButton(onClick={openUrl(item.externalUrl)}){Text("Publisher website")}
  }
  }
 }

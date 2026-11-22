@@ -10,18 +10,15 @@ android {
         applicationId = "site.baltygram.app"
         minSdk = 24
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
-        val url = project.findProperty("SUPABASE_URL")?.toString() ?: System.getenv("SUPABASE_URL") ?: ""
+        versionCode = 2
+        versionName = "1.0.0"
+        val url = project.findProperty("SUPABASE_URL")?.toString() ?: System.getenv("SUPABASE_URL") ?: "https://atovuyugeqrbfhkpyhax.supabase.co"
         val key = project.findProperty("SUPABASE_PUBLISHABLE_KEY")?.toString() ?: System.getenv("SUPABASE_PUBLISHABLE_KEY") ?: ""
         buildConfigField("String", "SUPABASE_URL", "\"$url\"")
         buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"$key\"")
     }
     buildFeatures { buildConfig = true }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
+    compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     kotlinOptions { jvmTarget = "17" }
 }
 dependencies {

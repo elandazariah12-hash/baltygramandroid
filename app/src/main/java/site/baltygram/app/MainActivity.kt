@@ -46,7 +46,7 @@ class MainActivity:ComponentActivity(){
  MaterialTheme(colorScheme=if(dark) darkColorScheme(primary=androidx.compose.ui.graphics.Color(0xFF10B981),secondary=androidx.compose.ui.graphics.Color(0xFF6EE7B7)) else lightColorScheme(primary=androidx.compose.ui.graphics.Color(0xFF059669),secondary=androidx.compose.ui.graphics.Color(0xFF10B981))){
  Scaffold(topBar={TopAppBar(title={Text("BaltyGram",fontWeight=FontWeight.Bold)},actions={
  IconButton(onClick={dark=!dark}){Icon(if(dark) Icons.Default.LightMode else Icons.Default.DarkMode,"Theme")}
- IconButton(onClick={ {page="Notifications"; runTask{notices=SupabaseClient.notifications()}} }){BadgedBox(badge={if(notices.isNotEmpty()) Badge { Text(notices.size.toString()) }}){Icon(Icons.Default.Notifications,"Notifications")}}
+ IconButton(onClick={page="Notifications"; runTask{notices=SupabaseClient.notifications()}}){BadgedBox(badge={if(notices.isNotEmpty()) Badge { Text(notices.size.toString()) }}){Icon(Icons.Default.Notifications,"Notifications")}}
  IconButton(onClick={::refresh}){Icon(Icons.Default.Refresh,"Refresh")}
  })},bottomBar={NavigationBar{listOf("Home","Explore","Community","Inbox","Saved","Account").forEach{p->NavigationBarItem(selected=page==p,onClick={page=p;selected=null},icon={Icon(when(p){"Home"->Icons.Default.Home;"Explore"->Icons.Default.Explore;"Community"->Icons.Default.Groups;"Inbox"->Icons.Default.Chat;"Saved"->Icons.Default.Bookmark;else->Icons.Default.Person},p)},label={Text(p)})}}}){pad->
  Column(Modifier.fillMaxSize().padding(pad)){
@@ -94,8 +94,8 @@ class MainActivity:ComponentActivity(){
  "Creator"->Column(Modifier.fillMaxSize().padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
  Text("Creator Studio",style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Bold)
  Text("Manage your developer presence and submit new listings through BaltyGram's review workflow.")
- Button(onClick={ {openUrl("https://baltygram.site/#submit")} }){Text("Open upload wizard")}
- Button(onClick={ {openUrl("https://baltygram.site/#uploads")} }){Text("Manage my uploads")}
+ Button(onClick={openUrl("https://baltygram.site/#submit")}){Text("Open upload wizard")}
+ Button(onClick={openUrl("https://baltygram.site/#uploads")}){Text("Manage my uploads")}
  Text("Uploads are reviewed by the BaltyGram moderation workflow. The app does not bypass approval or expose private package storage.")
  }
  }

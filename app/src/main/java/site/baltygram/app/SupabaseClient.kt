@@ -37,7 +37,22 @@ object SupabaseClient {
  fun signOut(){try{request("/auth/v1/logout","POST",JSONObject())}finally{access="";refresh="";prefs.edit().clear().apply()}}
  private fun arr(path:String)=JSONArray(request(path))
  private fun obj(path:String)=JSONObject(request(path))
- fun listings():List<Listing>{val a=arr("/rest/v1/software?select=id,name,short_description,description,software_type,icon_url,external_url:website_url,software_versions(id,version,external_url)&status=eq.approved&deleted_at=is.null&order=is_featured.desc,created_at.desc&limit=100");return (0 until a.length()).map{i->val x=a.getJSONObject(i);val vs=x.optJSONArray("software_versions");val v=if(vs!=null&&vs.length()>0)vs.getJSONObject(0) else JSONObject();Listing(x.optString("id"),x.optString("name"),x.optString("description",x.optString("short_description")),x.optString("software_type","Other"),x.optString("icon_url"),v.optString("id"),v.optString("external_url"))}}
+ private fun parseListings(a:JSONArray):List<Listing> = (0 until a.length()).map{i->
+  val x=a.getJSONObject(i)
+  val vs=x.optJSONArray("software_versions")
+  val v=if(vs!=null&&vs.length()>0)vs.getJSONObject(0) else JSONObject()
+  Listing(x.optString("id"),x.optString("name"),x.optString("description",x.optString("short_description")),x.optString("software_type","Other"),x.optString("icon_url"),v.optString("id"),v.optString("external_url"),x.optInt("views"),x.optInt("download_count"),x.optString("created_at"))
+ }
+ fun listings():List<Listing>{
+  return try {
+   val a=arr("/rest/v1/software?select=id,name,short_description,description,software_type,icon_url,external_url:website_url,views,download_count,created_at,software_versions(id,version,external_url)&status=eq.approved&deleted_at=is.null&order=is_featured.desc,created_at.desc&limit=100")
+   prefs.edit().putString("catalogue_cache",a.toString()).apply()
+   parseListings(a)
+  } catch(e:Exception) {
+   val cached=prefs.getString("catalogue_cache",null) ?: throw e
+   parseListings(JSONArray(cached))
+  }
+ }
  fun categories():List<String>{return try{val a=arr("/rest/v1/categories?select=name&order=name");(0 until a.length()).map{a.getJSONObject(it).optString("name")}}catch(_:Exception){emptyList()}}
  fun favorites():Set<String>{if(access.isBlank())return emptySet();val a=arr("/rest/v1/favorites?select=software_id");return (0 until a.length()).map{a.getJSONObject(it).optString("software_id")}.toSet()}
  fun toggleFavorite(id:String,exists:Boolean){val uid=userId();if(exists)request("/rest/v1/favorites?user_id=eq.$uid&software_id=eq.$id","DELETE") else request("/rest/v1/favorites","POST",JSONObject().put("user_id",uid).put("software_id",id))}

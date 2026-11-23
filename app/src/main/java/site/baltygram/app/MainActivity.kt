@@ -233,10 +233,13 @@ fun ExploreScreen(listings:List<Listing>,query:String,onQuery:(String)->Unit,fil
 @Composable
 fun ListingCard(item:Listing,onClick:()->Unit){
  Card(Modifier.fillMaxWidth().clickable{onClick()}){
-  Column(Modifier.padding(16.dp)){
-   Text(item.name,style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.SemiBold)
-   Text(item.type,style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.primary)
-   Text(item.description,maxLines=3,color=MaterialTheme.colorScheme.onSurfaceVariant)
+  Row(Modifier.padding(14.dp),horizontalArrangement=Arrangement.spacedBy(12.dp)){
+   if(item.icon.isNotBlank()) coil.compose.AsyncImage(model=item.icon,contentDescription=item.name,modifier=Modifier.size(68.dp))
+   Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(3.dp)){
+    Text(item.name,style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.SemiBold)
+    Text(item.type,style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.primary)
+    Text(item.description,maxLines=3,color=MaterialTheme.colorScheme.onSurfaceVariant)
+   }
   }
  }
 }
@@ -247,6 +250,7 @@ fun ListingDetail(item:Listing,saved:Boolean,onBack:()->Unit,onSave:()->Unit,onD
   TextButton(onClick=onBack){Icon(Icons.Default.ArrowBack,null);Text("Back")}
   Text(item.name,style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Bold)
   Text(item.type,color=MaterialTheme.colorScheme.primary)
+  if(item.icon.isNotBlank()) coil.compose.AsyncImage(model=item.icon,contentDescription=item.name,modifier=Modifier.fillMaxWidth().height(180.dp))
   Text(item.description)
   Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
    OutlinedButton(onClick=onSave){Icon(if(saved)Icons.Default.Bookmark else Icons.Default.BookmarkBorder,null);Text(if(saved)"Saved" else "Save")}

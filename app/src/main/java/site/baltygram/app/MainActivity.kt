@@ -160,7 +160,7 @@ fun BaltyGramApp(openUrl:(String)->Unit,enqueueDownload:(Listing)->Unit){
       "Explore" -> ExploreScreen(listings,query,{query=it},filter,{filter=it},onOpen={selected=it})
       "Community" -> CommunityScreen(communities,loggedIn=SupabaseClient.token().isNotBlank(),onJoin={id->task{SupabaseClient.joinCommunity(id);communities=SupabaseClient.communities()}})
       "Saved" -> SavedScreen(listings,saved,onOpen={selected=it})
-      "Notifications" -> NotificationScreen(notices)
+      "Notifications" -> NotificationScreen(notices,onMarkRead={task{SupabaseClient.markAllNotificationsRead();notices=SupabaseClient.notifications()}})
       "Inbox" -> InboxScreen(
        loggedIn=SupabaseClient.token().isNotBlank(),inbox=inbox,chatId=chatId,chatRows=chatRows,chatText=chatText,
        onLoad={task{inbox=SupabaseClient.inbox()}},
@@ -278,10 +278,16 @@ fun SavedScreen(listings:List<Listing>,saved:Set<String>,onOpen:(Listing)->Unit)
 }
 
 @Composable
-fun NotificationScreen(items:List<Notice>){
- LazyColumn(Modifier.fillMaxSize().padding(16.dp)){
-  item{Text("Notifications",style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Bold)}
-  items(items){n->Card(Modifier.fillMaxWidth().padding(vertical=4.dp)){Column(Modifier.padding(14.dp)){Text(n.title,fontWeight=FontWeight.Bold);Text(n.body)}}}
+fun NotificationScreen(items:List<Notice>,onMarkRead:()->Unit){
+ LazyColumn(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
+  item{
+   Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
+    Text("Notifications",style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Bold)
+    TextButton(onClick=onMarkRead){Text("Mark all read")}
+   }
+  }
+  if(items.isEmpty()) item{Text("You're all caught up.")}
+  items(items){n->Card(Modifier.fillMaxWidth()){Column(Modifier.padding(14.dp)){Text(n.title,fontWeight=FontWeight.Bold);Text(n.body)}}}
  }
 }
 

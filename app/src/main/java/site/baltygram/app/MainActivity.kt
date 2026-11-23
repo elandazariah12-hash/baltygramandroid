@@ -173,7 +173,7 @@ fun BaltyGramApp(openUrl:(String)->Unit,enqueueDownload:(Listing)->Unit){
      )
     } else {
      when(page){
-      "Home" -> HomeScreen(listings,onOpen={selected=it;SupabaseClient.recordRecent(it.id)},onExplore={page="Explore"})
+      "Home" -> HomeScreen(listings,recent,onOpen={selected=it;SupabaseClient.recordRecent(it.id)},onExplore={page="Explore"})
       "Explore" -> ExploreScreen(listings,query,{query=it},filter,{filter=it},onOpen={selected=it;SupabaseClient.recordRecent(it.id)})
       "Categories" -> CategoriesScreen(categories,listings,onChoose={c->filter=c.name;page="Explore"})
        "My uploads" -> MyUploadsScreen(myUploads,onOpen={item->selected=item;SupabaseClient.recordRecent(item.id)})
@@ -191,7 +191,7 @@ fun BaltyGramApp(openUrl:(String)->Unit,enqueueDownload:(Listing)->Unit){
       "Account" -> AccountScreen(
        email=email,loginEmail=loginEmail,password=password,showPassword=showPassword,onShowPassword={showPassword=it},
        onLoginEmail={loginEmail=it},onPassword={password=it},
-       onSignIn={task{SupabaseClient.signIn(loginEmail,password);email=SupabaseClient.email();saved=SupabaseClient.favorites();communities=SupabaseClient.communities()}},
+       onSignIn={task{SupabaseClient.signIn(loginEmail,password);email=SupabaseClient.email();saved=SupabaseClient.favorites();communities=SupabaseClient.communities();myUploads=SupabaseClient.myListings()}},
        onSignUp={task{SupabaseClient.signUp(loginEmail,password);notice="Account created. Check your email to confirm, then sign in."}},
        onReset={task{SupabaseClient.resetPassword(loginEmail);notice="Password reset email sent."}},
        onSignOut={task{SupabaseClient.signOut();email="";saved=emptySet();communities=emptyList()}},

@@ -252,7 +252,6 @@ fun ExploreScreen(listings:List<Listing>,query:String,onQuery:(String)->Unit,fil
 }
 
 @Composable
-@Composable
 fun CategoriesScreen(categories:List<Category>,listings:List<Listing>,onChoose:(Category)->Unit){
  LazyColumn(Modifier.fillMaxSize().padding(18.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
   item{Text("Categories",style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Bold);Text("Browse BaltyGram by category.",color=MaterialTheme.colorScheme.onSurfaceVariant)}

@@ -2,6 +2,9 @@ package site.baltygram.app
 
 import android.content.Intent
 import android.net.Uri
+import android.app.DownloadManager
+import android.content.Context
+import android.os.Environment
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -27,13 +30,13 @@ class MainActivity:ComponentActivity(){
  override fun onCreate(savedInstanceState:Bundle?){
   super.onCreate(savedInstanceState)
   SupabaseClient.init(applicationContext)
-  setContent { BaltyGramApp { url -> startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) } }
+  setContent { BaltyGramApp(openUrl={ url -> startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }, enqueueDownload={ item ->\n    val url=SupabaseClient.download(item)\n    val request=DownloadManager.Request(Uri.parse(url)).setTitle(item.name).setDescription("Downloading from BaltyGram").setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED).setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, item.name.replace(Regex("[^A-Za-z0-9._-]"),"_")+".download")\n    (getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager).enqueue(request)\n   } }
  }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BaltyGramApp(openUrl:(String)->Unit){
+fun BaltyGramApp(openUrl:(String)->Unit,enqueueDownload:(Listing)->Unit){
  var page by remember { mutableStateOf("Home") }
  var dark by remember { mutableStateOf(false) }
  var listings by remember { mutableStateOf(listOf<Listing>()) }
@@ -45,7 +48,7 @@ fun BaltyGramApp(openUrl:(String)->Unit){
  var filter by remember { mutableStateOf("All") }
  var email by remember { mutableStateOf(SupabaseClient.email()) }
  var loginEmail by remember { mutableStateOf("") }
- var password by remember { mutableStateOf("") }
+ var password by remember { mutableStateOf("") }\n var showPassword by remember { mutableStateOf(false) }
  var displayName by remember { mutableStateOf("") }
  var notice by remember { mutableStateOf("") }
  var busy by remember { mutableStateOf(false) }
@@ -141,7 +144,7 @@ fun BaltyGramApp(openUrl:(String)->Unit){
         saved=SupabaseClient.favorites()
        }
       },
-      onDownload={item->task{openUrl(SupabaseClient.download(item))}},
+      onDownload={item->task{enqueueDownload(item)}},
       openUrl=openUrl
      )
     } else {
@@ -160,7 +163,7 @@ fun BaltyGramApp(openUrl:(String)->Unit){
        onSend={task{SupabaseClient.sendMessage(chatId,chatText);chatText="";chatRows=SupabaseClient.messages(chatId)}}
       )
       "Account" -> AccountScreen(
-       email=email,loginEmail=loginEmail,password=password,displayName=displayName,
+       email=email,loginEmail=loginEmail,password=password,displayName=displayName,showPassword=showPassword,onShowPassword={showPassword=it},
        onLoginEmail={loginEmail=it},onPassword={password=it},onDisplayName={displayName=it},
        onSignIn={task{SupabaseClient.signIn(loginEmail,password);email=SupabaseClient.email();saved=SupabaseClient.favorites();communities=SupabaseClient.communities()}},
        onSignUp={task{SupabaseClient.signUp(displayName,loginEmail,password);notice="Account created. Check your email to confirm, then sign in."}},
@@ -169,7 +172,7 @@ fun BaltyGramApp(openUrl:(String)->Unit){
        onCreator={page="Creator"}
       )
       "Creator" -> CreatorScreen(openUrl)
-      "Downloads" -> InfoScreen("Downloads","Your downloaded files will be listed here. A persistent download manager is not connected in this build.")
+      "Downloads" -> InfoScreen("Downloads","Files downloaded through BaltyGram are saved in your device Downloads folder. Android shows progress and completion notifications.")
       "Settings" -> InfoScreen("Settings","Theme controls are available from the top bar. Account and privacy settings remain tied to your BaltyGram account.")
       "Help" -> InfoScreen("Help","Visit baltygram.site for support and platform information.")
       "About" -> InfoScreen("About BaltyGram","A digital discovery platform for games, apps, software and developer tools.")
@@ -286,14 +289,14 @@ fun InboxScreen(loggedIn:Boolean,inbox:List<JSONObject>,chatId:String,chatRows:L
 }
 
 @Composable
-fun AccountScreen(email:String,loginEmail:String,password:String,displayName:String,onLoginEmail:(String)->Unit,onPassword:(String)->Unit,onDisplayName:(String)->Unit,onSignIn:()->Unit,onSignUp:()->Unit,onReset:()->Unit,onSignOut:()->Unit,onCreator:()->Unit){
+fun AccountScreen(email:String,loginEmail:String,password:String,displayName:String,showPassword:Boolean,onShowPassword:(Boolean)->Unit,onLoginEmail:(String)->Unit,onPassword:(String)->Unit,onDisplayName:(String)->Unit,onSignIn:()->Unit,onSignUp:()->Unit,onReset:()->Unit,onSignOut:()->Unit,onCreator:()->Unit){
  LazyColumn(Modifier.fillMaxSize().padding(20.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
   item{Text("Your account",style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Bold)}
   if(email.isBlank()){
    item{Text("Sign in or create your BaltyGram account.")}
    item{OutlinedTextField(displayName,onDisplayName,Modifier.fillMaxWidth(),label={Text("Display name")})}
    item{OutlinedTextField(loginEmail,onLoginEmail,Modifier.fillMaxWidth(),label={Text("Email")})}
-   item{OutlinedTextField(password,onPassword,Modifier.fillMaxWidth(),label={Text("Password")})}
+   item{OutlinedTextField(password,onPassword,Modifier.fillMaxWidth(),label={Text("Password")},visualTransformation=if(showPassword) androidx.compose.ui.text.input.VisualTransformation.None else androidx.compose.ui.text.input.PasswordVisualTransformation(),trailingIcon={TextButton(onClick={onShowPassword(!showPassword)}){Text(if(showPassword)"Hide" else "Show")}})}
    item{Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){Button(onClick=onSignIn,enabled=loginEmail.isNotBlank()&&password.isNotBlank()){Text("Sign in")};OutlinedButton(onClick=onSignUp,enabled=displayName.isNotBlank()&&loginEmail.isNotBlank()&&password.length>=8){Text("Sign up")}}}
    item{TextButton(onClick=onReset){Text("Forgot password?")}}
   }else{

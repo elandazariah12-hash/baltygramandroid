@@ -262,11 +262,11 @@ fun CategoriesScreen(categories:List<Category>,listings:List<Listing>,onChoose:(
 }
 
 @Composable
-fun MyUploadsScreen(items:List<CreatorListing>,onOpen:(Listing)->Unit){
+fun MyUploadsScreen(uploads:List<CreatorListing>,onOpen:(Listing)->Unit){
  LazyColumn(Modifier.fillMaxSize().padding(18.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
   item{Text("My uploads",style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Bold);Text("Manage the listings published from your developer account.",color=MaterialTheme.colorScheme.onSurfaceVariant)}
-  if(items.isEmpty()) item{Text("No uploads found. Sign in with your creator account or publish your first listing.")}
-  items(items){row->Column(verticalArrangement=Arrangement.spacedBy(4.dp)){ListingCard(row.item){onOpen(row.item)};Text("Status: ${row.status.replaceFirstChar{it.uppercase()}} · ${row.item.downloads} downloads · ${row.item.views} views",Modifier.padding(start=8.dp),color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.labelMedium)}}
+  if(uploads.isEmpty()) item{Text("No uploads found. Sign in with your creator account or publish your first listing.")}
+  items(uploads){row->Column(verticalArrangement=Arrangement.spacedBy(4.dp)){ListingCard(row.item){onOpen(row.item)};Text("Status: ${row.status.replaceFirstChar{it.uppercase()}} · ${row.item.downloads} downloads · ${row.item.views} views",Modifier.padding(start=8.dp),color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.labelMedium)}}
  }
 }
 

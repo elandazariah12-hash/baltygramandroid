@@ -279,15 +279,6 @@ fun CommunityScreen(items:List<Community>,loggedIn:Boolean,onJoin:(String)->Unit
 
 @Composable
 fun SavedScreen(listings:List<Listing>,saved:Set<String>,onOpen:(Listing)->Unit){
- LazyColumn(Modifier.fillMaxSize().padding(16.dp)){
-  item{Text("Saved listings",style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Bold)}
-  items(listings.filter{saved.contains(it.id)}){ListingCard(it){onOpen(it)}}
-  if(saved.isEmpty())item{Text("Your saved discoveries will appear here after you sign in.")}
- }
-}
-
-@Composable
-fun SavedScreen(listings:List<Listing>,saved:Set<String>,onOpen:(Listing)->Unit){
  LazyColumn(Modifier.fillMaxSize().padding(horizontal=18.dp),verticalArrangement=Arrangement.spacedBy(10.dp),contentPadding=PaddingValues(vertical=18.dp)){
   item{
    Text("Saved",style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.ExtraBold)

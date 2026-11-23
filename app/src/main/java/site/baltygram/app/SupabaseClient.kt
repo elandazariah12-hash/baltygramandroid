@@ -32,7 +32,7 @@ object SupabaseClient {
  private fun enc(s:String)=URLEncoder.encode(s,"UTF-8")
  private fun saveSession(o:JSONObject){access=o.optString("access_token");refresh=o.optString("refresh_token");val u=o.optJSONObject("user");prefs.edit().putString("access",access).putString("refresh",refresh).putString("email",u?.optString("email")?:"").apply()}
  fun signIn(email:String,password:String){val o=JSONObject(request("/auth/v1/token?grant_type=password","POST",JSONObject().put("email",email).put("password",password),false));saveSession(o)}
- fun signUp(name:String,email:String,password:String){request("/auth/v1/signup","POST",JSONObject().put("email",email).put("password",password).put("data",JSONObject().put("full_name",name)),false)}
+ fun signUp(email:String,password:String){request("/auth/v1/signup","POST",JSONObject().put("email",email).put("password",password),false)}
  fun resetPassword(email:String){request("/auth/v1/recover","POST",JSONObject().put("email",email),false)}
  fun signOut(){try{request("/auth/v1/logout","POST",JSONObject())}finally{access="";refresh="";prefs.edit().clear().apply()}}
  private fun arr(path:String)=JSONArray(request(path))

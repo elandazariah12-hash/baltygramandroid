@@ -36,7 +36,7 @@ class MainActivity:ComponentActivity(){
     val url=SupabaseClient.download(item)
     val request=DownloadManager.Request(Uri.parse(url)).setTitle(item.name).setDescription("Downloading from BaltyGram").setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED).setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, item.name.replace(Regex("[^A-Za-z0-9._-]"),"_")+".download")
     (getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager).enqueue(request)
-   } }
+   }) }
  }
 }
 
@@ -56,7 +56,6 @@ fun BaltyGramApp(openUrl:(String)->Unit,enqueueDownload:(Listing)->Unit){
  var loginEmail by remember { mutableStateOf("") }
  var password by remember { mutableStateOf("") }
  var showPassword by remember { mutableStateOf(false) }
- var displayName by remember { mutableStateOf("") }
  var notice by remember { mutableStateOf("") }
  var busy by remember { mutableStateOf(false) }
  var inbox by remember { mutableStateOf(listOf<JSONObject>()) }
@@ -69,7 +68,7 @@ fun BaltyGramApp(openUrl:(String)->Unit,enqueueDownload:(Listing)->Unit){
  fun task(block:suspend()->Unit){
   scope.launch {
    busy=true; notice=""
-   try { withContext(Dispatchers.IO) { block() } } catch(e:Exception) { notice=e.message ?: "Something went wrong." }
+   try { withContext(Dispatchers.IO) { block() } } catch(e:Exception) { notice=e.message?.takeIf { it.isNotBlank() } ?: "Request failed (${e.javaClass.simpleName}). Check your connection and try again." }
    finally { busy=false }
   }
  }
@@ -170,10 +169,10 @@ fun BaltyGramApp(openUrl:(String)->Unit,enqueueDownload:(Listing)->Unit){
        onSend={task{SupabaseClient.sendMessage(chatId,chatText);chatText="";chatRows=SupabaseClient.messages(chatId)}}
       )
       "Account" -> AccountScreen(
-       email=email,loginEmail=loginEmail,password=password,displayName=displayName,showPassword=showPassword,onShowPassword={showPassword=it},
-       onLoginEmail={loginEmail=it},onPassword={password=it},onDisplayName={displayName=it},
+       email=email,loginEmail=loginEmail,password=password,showPassword=showPassword,onShowPassword={showPassword=it},
+       onLoginEmail={loginEmail=it},onPassword={password=it},
        onSignIn={task{SupabaseClient.signIn(loginEmail,password);email=SupabaseClient.email();saved=SupabaseClient.favorites();communities=SupabaseClient.communities()}},
-       onSignUp={task{SupabaseClient.signUp(displayName,loginEmail,password);notice="Account created. Check your email to confirm, then sign in."}},
+       onSignUp={task{SupabaseClient.signUp(loginEmail,password);notice="Account created. Check your email to confirm, then sign in."}},
        onReset={task{SupabaseClient.resetPassword(loginEmail);notice="Password reset email sent."}},
        onSignOut={task{SupabaseClient.signOut();email="";saved=emptySet();communities=emptyList()}},
        onCreator={page="Creator"}
@@ -309,15 +308,14 @@ fun InboxScreen(loggedIn:Boolean,inbox:List<JSONObject>,chatId:String,chatRows:L
 }
 
 @Composable
-fun AccountScreen(email:String,loginEmail:String,password:String,displayName:String,showPassword:Boolean,onShowPassword:(Boolean)->Unit,onLoginEmail:(String)->Unit,onPassword:(String)->Unit,onDisplayName:(String)->Unit,onSignIn:()->Unit,onSignUp:()->Unit,onReset:()->Unit,onSignOut:()->Unit,onCreator:()->Unit){
+fun AccountScreen(email:String,loginEmail:String,password:String,showPassword:Boolean,onShowPassword:(Boolean)->Unit,onLoginEmail:(String)->Unit,onPassword:(String)->Unit,onSignIn:()->Unit,onSignUp:()->Unit,onReset:()->Unit,onSignOut:()->Unit,onCreator:()->Unit){
  LazyColumn(Modifier.fillMaxSize().padding(20.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
   item{Text("Your account",style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Bold)}
   if(email.isBlank()){
    item{Text("Sign in or create your BaltyGram account.")}
-   item{OutlinedTextField(displayName,onDisplayName,Modifier.fillMaxWidth(),label={Text("Display name")})}
    item{OutlinedTextField(loginEmail,onLoginEmail,Modifier.fillMaxWidth(),label={Text("Email")})}
    item{OutlinedTextField(password,onPassword,Modifier.fillMaxWidth(),label={Text("Password")},visualTransformation=if(showPassword) androidx.compose.ui.text.input.VisualTransformation.None else androidx.compose.ui.text.input.PasswordVisualTransformation(),trailingIcon={TextButton(onClick={onShowPassword(!showPassword)}){Text(if(showPassword)"Hide" else "Show")}})}
-   item{Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){Button(onClick=onSignIn,enabled=loginEmail.isNotBlank()&&password.isNotBlank()){Text("Sign in")};OutlinedButton(onClick=onSignUp,enabled=displayName.isNotBlank()&&loginEmail.isNotBlank()&&password.length>=8){Text("Sign up")}}}
+   item{Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){Button(onClick=onSignIn,enabled=loginEmail.isNotBlank()&&password.isNotBlank()){Text("Sign in")};OutlinedButton(onClick=onSignUp,enabled=loginEmail.contains("@")&&password.length>=8){Text("Sign up")}}}
    item{TextButton(onClick=onReset){Text("Forgot password?")}}
   }else{
    item{Text("Signed in as $email")}

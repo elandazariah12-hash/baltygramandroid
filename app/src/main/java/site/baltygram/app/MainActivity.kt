@@ -9,6 +9,15 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -85,8 +94,8 @@ fun BaltyGramApp(openUrl:(String)->Unit,enqueueDownload:(Listing)->Unit){
  LaunchedEffect(Unit){ load() }
 
  MaterialTheme(
-  colorScheme=if(dark) darkColorScheme(primary=androidx.compose.ui.graphics.Color(0xFF10B981),secondary=androidx.compose.ui.graphics.Color(0xFF6EE7B7))
-  else lightColorScheme(primary=androidx.compose.ui.graphics.Color(0xFF059669),secondary=androidx.compose.ui.graphics.Color(0xFF10B981))
+  colorScheme=if(dark) darkColorScheme(primary=Color(0xFF8AB4FF),secondary=Color(0xFF5EEAD4),background=Color(0xFF0B1220),surface=Color(0xFF111B2E))
+  else lightColorScheme(primary=Color(0xFF2563EB),secondary=Color(0xFF0F9D8A),background=Color(0xFFF5F7FB),surface=Color(0xFFFFFFFF),surfaceVariant=Color(0xFFEAF0F8))
  ){
   ModalNavigationDrawer(
    drawerState=drawerState,
@@ -111,7 +120,8 @@ fun BaltyGramApp(openUrl:(String)->Unit,enqueueDownload:(Listing)->Unit){
   Scaffold(
    topBar={
     TopAppBar(
-     title={Text("BaltyGram",fontWeight=FontWeight.Bold)},
+     colors=TopAppBarDefaults.topAppBarColors(containerColor=MaterialTheme.colorScheme.background),
+     title={Text("BaltyGram",fontWeight=FontWeight.ExtraBold,style=MaterialTheme.typography.titleLarge)},
      navigationIcon={IconButton(onClick={scope.launch { drawerState.open() }}){Icon(Icons.Default.Menu,"Open navigation menu")}},
      actions={
       IconButton(onClick={dark=!dark}){Icon(if(dark) Icons.Default.LightMode else Icons.Default.DarkMode,"Theme")}
@@ -123,7 +133,7 @@ fun BaltyGramApp(openUrl:(String)->Unit,enqueueDownload:(Listing)->Unit){
     )
    },
    bottomBar={
-    NavigationBar {
+    NavigationBar(containerColor=MaterialTheme.colorScheme.surface, tonalElevation=6.dp) {
      listOf("Home","Explore","Community","Account").forEach { p ->
       NavigationBarItem(
        selected=page==p,
@@ -273,6 +283,27 @@ fun SavedScreen(listings:List<Listing>,saved:Set<String>,onOpen:(Listing)->Unit)
   item{Text("Saved listings",style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Bold)}
   items(listings.filter{saved.contains(it.id)}){ListingCard(it){onOpen(it)}}
   if(saved.isEmpty())item{Text("Your saved discoveries will appear here after you sign in.")}
+ }
+}
+
+@Composable
+fun SavedScreen(listings:List<Listing>,saved:Set<String>,onOpen:(Listing)->Unit){
+ LazyColumn(Modifier.fillMaxSize().padding(horizontal=18.dp),verticalArrangement=Arrangement.spacedBy(10.dp),contentPadding=PaddingValues(vertical=18.dp)){
+  item{
+   Text("Saved",style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.ExtraBold)
+   Text("Your bookmarked discoveries.",color=MaterialTheme.colorScheme.onSurfaceVariant)
+  }
+  val savedItems=listings.filter{saved.contains(it.id)}
+  if(savedItems.isEmpty()) item{
+   Card(shape=RoundedCornerShape(18.dp),colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.surface)){
+    Column(Modifier.fillMaxWidth().padding(20.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
+     Icon(Icons.Default.BookmarkBorder,null,tint=MaterialTheme.colorScheme.primary)
+     Text("Nothing saved yet",fontWeight=FontWeight.Bold)
+     Text("Save listings to keep them close at hand.",color=MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+   }
+  }
+  items(savedItems){ListingCard(it){onOpen(it)}}
  }
 }
 

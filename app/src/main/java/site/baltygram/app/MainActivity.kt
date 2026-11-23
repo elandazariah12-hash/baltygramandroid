@@ -33,7 +33,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
-data class Listing(val id:String,val name:String,val description:String,val type:String,val icon:String="",val versionId:String="",val externalUrl:String="",val views:Int=0,val downloads:Int=0,val createdAt:String="")
+data class Listing(val id:String,val name:String,val description:String,val type:String,val icon:String="",val versionId:String="",val externalUrl:String="",val views:Int=0,val downloads:Int=0,val createdAt:String="",val category:String="")
+data class Category(val id:String,val name:String,val type:String)
+data class CreatorListing(val item:Listing,val status:String)
 data class Community(val id:String,val name:String,val description:String)
 data class Notice(val id:String,val title:String,val body:String)
 
@@ -55,6 +57,9 @@ fun BaltyGramApp(openUrl:(String)->Unit,enqueueDownload:(Listing)->Unit){
  var page by remember { mutableStateOf("Home") }
  var dark by remember { mutableStateOf(false) }
  var listings by remember { mutableStateOf(listOf<Listing>()) }
+  var categories by remember { mutableStateOf(listOf<Category>()) }
+  var myUploads by remember { mutableStateOf(listOf<CreatorListing>()) }
+  var recent by remember { mutableStateOf(listOf<Listing>()) }
  var communities by remember { mutableStateOf(listOf<Community>()) }
  var notices by remember { mutableStateOf(listOf<Notice>()) }
  var saved by remember { mutableStateOf(setOf<String>()) }
@@ -84,6 +89,9 @@ fun BaltyGramApp(openUrl:(String)->Unit,enqueueDownload:(Listing)->Unit){
  fun load(){
   task {
    listings=SupabaseClient.listings()
+    categories=SupabaseClient.categories()
+    recent=SupabaseClient.recentListings(listings)
+    if(SupabaseClient.token().isNotBlank()) myUploads=SupabaseClient.myListings()
    if(SupabaseClient.token().isNotBlank()){
     saved=SupabaseClient.favorites()
     communities=SupabaseClient.communities()
@@ -111,7 +119,7 @@ fun BaltyGramApp(openUrl:(String)->Unit,enqueueDownload:(Listing)->Unit){
        label={Text(destination)},
        selected=page==destination || (destination=="Creator Studio" && page=="Creator"),
        icon={Icon(when(destination){"Home"->Icons.Default.Home;"Explore"->Icons.Default.Explore;"Categories"->Icons.Default.Category;"Trending"->Icons.Default.TrendingUp;"New releases"->Icons.Default.NewReleases;"Community"->Icons.Default.Groups;"Inbox"->Icons.Default.Chat;"Notifications"->Icons.Default.Notifications;"Saved"->Icons.Default.Bookmark;"Downloads"->Icons.Default.Download;"Creator Studio"->Icons.Default.Upload;"My uploads"->Icons.Default.Folder;"Developer profile"->Icons.Default.Code;"Analytics"->Icons.Default.Analytics;"Account"->Icons.Default.Person;"Settings"->Icons.Default.Settings;"Help"->Icons.Default.HelpOutline;else->Icons.Default.Info},null)},
-       onClick={scope.launch { drawerState.close(); page=when(destination){"Creator Studio"->"Creator";"Categories"->"Explore";"Trending"->{filter="Trending";"Explore"};"New releases"->{filter="New";"Explore"};"My uploads","Developer profile","Analytics"->"Creator";else->destination};selected=null }}
+       onClick={scope.launch { drawerState.close(); page=when(destination){"Creator Studio"->"Creator";"Categories"->"Categories";"Trending"->{filter="Trending";"Explore"};"New releases"->{filter="New";"Explore"};"My uploads"->"My uploads";"Developer profile","Analytics"->"Creator";else->destination};selected=null }}
       )
      }
     }
@@ -165,9 +173,11 @@ fun BaltyGramApp(openUrl:(String)->Unit,enqueueDownload:(Listing)->Unit){
      )
     } else {
      when(page){
-      "Home" -> HomeScreen(listings,onOpen={selected=it},onExplore={page="Explore"})
-      "Explore" -> ExploreScreen(listings,query,{query=it},filter,{filter=it},onOpen={selected=it})
-      "Community" -> CommunityScreen(communities,loggedIn=SupabaseClient.token().isNotBlank(),onJoin={id->task{SupabaseClient.joinCommunity(id);communities=SupabaseClient.communities()}})
+      "Home" -> HomeScreen(listings,onOpen={selected=it;SupabaseClient.recordRecent(it.id)},onExplore={page="Explore"})
+      "Explore" -> ExploreScreen(listings,query,{query=it},filter,{filter=it},onOpen={selected=it;SupabaseClient.recordRecent(it.id)})
+      "Categories" -> CategoriesScreen(categories,listings,onChoose={c->filter=c.name;page="Explore"})
+       "My uploads" -> MyUploadsScreen(myUploads,onOpen={item->selected=item;SupabaseClient.recordRecent(item.id)})
+       "Community" -> CommunityScreen(communities,loggedIn=SupabaseClient.token().isNotBlank(),onJoin={id->task{SupabaseClient.joinCommunity(id);communities=SupabaseClient.communities()}})
       "Saved" -> SavedScreen(listings,saved,onOpen={selected=it})
       "Notifications" -> NotificationScreen(notices,onMarkRead={task{SupabaseClient.markAllNotificationsRead();notices=SupabaseClient.notifications()}})
       "Inbox" -> InboxScreen(
@@ -192,7 +202,7 @@ fun BaltyGramApp(openUrl:(String)->Unit,enqueueDownload:(Listing)->Unit){
       "Settings" -> InfoScreen("Settings","Theme controls are available from the top bar. Account and privacy settings remain tied to your BaltyGram account.")
       "Help" -> InfoScreen("Help","Visit baltygram.site for support and platform information.")
       "About" -> InfoScreen("About BaltyGram","A digital discovery platform for games, apps, software and developer tools.")
-      else -> HomeScreen(listings,onOpen={selected=it},onExplore={page="Explore"})
+      else -> HomeScreen(listings,recent,onOpen={selected=it;SupabaseClient.recordRecent(it.id)},onExplore={page="Explore"})
      }
     }
    }
@@ -210,14 +220,16 @@ fun InfoScreen(title:String,description:String){
 }
 
 @Composable
-fun HomeScreen(listings:List<Listing>,onOpen:(Listing)->Unit,onExplore:()->Unit){
+fun HomeScreen(listings:List<Listing>,recent:List<Listing>,onOpen:(Listing)->Unit,onExplore:()->Unit){
  LazyColumn(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
   item{
    Text("Discover digital tools.",style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Bold)
    Text("Games, apps, software and resources from developers.",color=MaterialTheme.colorScheme.onSurfaceVariant)
    Button(onClick=onExplore){Text("Explore catalogue")}
-   Text("Featured discoveries",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold)
+   if(recent.isNotEmpty()) Text("Continue exploring",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold)
   }
+  if(recent.isNotEmpty()) items(recent.take(6)){ListingCard(it){onOpen(it)}}
+  item{Text("Featured discoveries",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold)}
   if(listings.isEmpty()) item{Text("No approved listings yet. Refresh when your catalogue is populated.")}
   items(listings.take(30)){ListingCard(it){onOpen(it)}}
  }
@@ -230,12 +242,31 @@ fun ExploreScreen(listings:List<Listing>,query:String,onQuery:(String)->Unit,fil
   Row(horizontalArrangement=Arrangement.spacedBy(4.dp)){
    listOf("All","game","software","app","ai","editing","developer","Trending","New").forEach{f->FilterChip(selected=filter.equals(f,true),onClick={onFilter(f)},label={Text(f.replaceFirstChar{it.uppercase()})})}
   }
-  val filtered=listings.filter{(filter=="All"||filter=="Trending"||filter=="New"||it.type.contains(filter,true))&&(it.name.contains(query,true)||it.description.contains(query,true))}
+  val filtered=listings.filter{(filter=="All"||filter=="Trending"||filter=="New"||it.type.contains(filter,true)||it.category.contains(filter,true))&&(it.name.contains(query,true)||it.description.contains(query,true))}
   val ordered=when(filter){"Trending"->filtered.sortedByDescending{it.downloads};"New"->filtered.sortedByDescending{it.createdAt};else->filtered}
   LazyColumn(verticalArrangement=Arrangement.spacedBy(8.dp)){
    items(ordered){ListingCard(it){onOpen(it)}}
    if(ordered.isEmpty()) item{Text("No matching listings. Try another category or search term.")}
   }
+ }
+}
+
+@Composable
+@Composable
+fun CategoriesScreen(categories:List<Category>,listings:List<Listing>,onChoose:(Category)->Unit){
+ LazyColumn(Modifier.fillMaxSize().padding(18.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
+  item{Text("Categories",style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Bold);Text("Browse BaltyGram by category.",color=MaterialTheme.colorScheme.onSurfaceVariant)}
+  items(categories){c->val count=listings.count{it.category.equals(c.name,true)};Card(Modifier.fillMaxWidth().clickable{onChoose(c)}){Row(Modifier.padding(16.dp),horizontalArrangement=Arrangement.SpaceBetween){Column(Modifier.weight(1f)){Text(c.name,fontWeight=FontWeight.Bold);Text(c.type,color=MaterialTheme.colorScheme.onSurfaceVariant)};Text("$count listings",color=MaterialTheme.colorScheme.primary)}}}
+  if(categories.isEmpty()) item{Text("Categories will appear when the catalogue is available.")}
+ }
+}
+
+@Composable
+fun MyUploadsScreen(items:List<CreatorListing>,onOpen:(Listing)->Unit){
+ LazyColumn(Modifier.fillMaxSize().padding(18.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
+  item{Text("My uploads",style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Bold);Text("Manage the listings published from your developer account.",color=MaterialTheme.colorScheme.onSurfaceVariant)}
+  if(items.isEmpty()) item{Text("No uploads found. Sign in with your creator account or publish your first listing.")}
+  items(items){row->Column(verticalArrangement=Arrangement.spacedBy(4.dp)){ListingCard(row.item){onOpen(row.item)};Text("Status: ${row.status.replaceFirstChar{it.uppercase()}} · ${row.item.downloads} downloads · ${row.item.views} views",Modifier.padding(start=8.dp),color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.labelMedium)}}
  }
 }
 

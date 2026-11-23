@@ -41,11 +41,11 @@ object SupabaseClient {
   val x=a.getJSONObject(i)
   val vs=x.optJSONArray("software_versions")
   val v=if(vs!=null&&vs.length()>0)vs.getJSONObject(0) else JSONObject()
-  Listing(x.optString("id"),x.optString("name"),x.optString("description",x.optString("short_description")),x.optString("software_type","Other"),x.optString("icon_url"),v.optString("id"),v.optString("external_url"),x.optInt("views"),x.optInt("download_count"),x.optString("created_at"))
+  Listing(x.optString("id"),x.optString("name"),x.optString("description",x.optString("short_description")),x.optString("software_type","Other"),x.optString("icon_url"),v.optString("id"),v.optString("external_url"),x.optInt("views"),x.optInt("download_count"),x.optString("created_at"),x.optJSONObject("category")?.optString("name").orEmpty())
  }
  fun listings():List<Listing>{
   return try {
-   val a=arr("/rest/v1/software?select=id,name,short_description,description,software_type,icon_url,external_url:website_url,views,download_count,created_at,software_versions(id,version,external_url)&status=eq.approved&deleted_at=is.null&order=is_featured.desc,created_at.desc&limit=100")
+   val a=arr("/rest/v1/software?select=id,name,short_description,description,software_type,icon_url,external_url:website_url,views,download_count,created_at,category:categories(name),software_versions(id,version,external_url)&status=eq.approved&deleted_at=is.null&order=is_featured.desc,created_at.desc&limit=100")
    prefs.edit().putString("catalogue_cache",a.toString()).apply()
    parseListings(a)
   } catch(e:Exception) {
@@ -53,7 +53,10 @@ object SupabaseClient {
    parseListings(JSONArray(cached))
   }
  }
- fun categories():List<String>{return try{val a=arr("/rest/v1/categories?select=name&order=name");(0 until a.length()).map{a.getJSONObject(it).optString("name")}}catch(_:Exception){emptyList()}}
+ fun categories():List<Category>{return try{val a=arr("/rest/v1/categories?select=id,name,software_type&order=name");(0 until a.length()).map{val x=a.getJSONObject(it);Category(x.optString("id"),x.optString("name"),x.optString("software_type"))}}catch(_:Exception){emptyList()}}
+ fun myListings():List<CreatorListing>{if(access.isBlank())return emptyList();val uid=userId();val a=arr("/rest/v1/software?select=id,name,short_description,description,software_type,icon_url,views,download_count,created_at,status,category:categories(name),software_versions(id,version,external_url)&uploader_id=eq.$uid&deleted_at=is.null&order=created_at.desc&limit=100");return (0 until a.length()).map{i->val x=a.getJSONObject(i);val item=parseListings(JSONArray().put(x)).first();CreatorListing(item,x.optString("status","unknown"))}}
+ fun recordRecent(id:String){val ids=try{JSONArray(prefs.getString("recent_ids","[]"))}catch(_:Exception){JSONArray()};val next=JSONArray().put(id);for(i in 0 until ids.length()){val old=ids.optString(i);if(old!=id&&next.length()<12)next.put(old)};prefs.edit().putString("recent_ids",next.toString()).apply()}
+ fun recentListings(items:List<Listing>):List<Listing>{val ids=try{JSONArray(prefs.getString("recent_ids","[]"))}catch(_:Exception){JSONArray()};val byId=items.associateBy{it.id};return (0 until ids.length()).mapNotNull{byId[ids.optString(it)]}}
  fun favorites():Set<String>{if(access.isBlank())return emptySet();val a=arr("/rest/v1/favorites?select=software_id");return (0 until a.length()).map{a.getJSONObject(it).optString("software_id")}.toSet()}
  fun toggleFavorite(id:String,exists:Boolean){val uid=userId();if(exists)request("/rest/v1/favorites?user_id=eq.$uid&software_id=eq.$id","DELETE") else request("/rest/v1/favorites","POST",JSONObject().put("user_id",uid).put("software_id",id))}
  fun communities():List<Community>{val a=arr("/rest/v1/communities?select=id,name,description&is_active=eq.true&is_public=eq.true&order=name&limit=50");return (0 until a.length()).map{val x=a.getJSONObject(it);Community(x.optString("id"),x.optString("name"),x.optString("description"))}}

@@ -2,7 +2,7 @@ name: Build BaltyGram Android APK
 on:
   workflow_dispatch:
   push:
-    branches: [ main, stage3-native-app ]
+    branches: [ main, stage3-native-app, native-rebuild-v1 ]
     paths:
       - '**.kt'
       - '**.kts'

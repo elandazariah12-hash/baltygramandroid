@@ -22,7 +22,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 
-data class Listing(val id:String,val name:String,val description:String,val type:String,val icon:String="",val versionId:String="",val externalUrl:String="")
+data class Listing(val id:String,val name:String,val description:String,val type:String,val icon:String="",val versionId:String="",val externalUrl:String="",val views:Int=0,val downloads:Int=0,val createdAt:String="")
 data class Community(val id:String,val name:String,val description:String)
 data class Notice(val id:String,val title:String,val body:String)
 
@@ -101,7 +101,7 @@ fun BaltyGramApp(openUrl:(String)->Unit,enqueueDownload:(Listing)->Unit){
        label={Text(destination)},
        selected=page==destination || (destination=="Creator Studio" && page=="Creator"),
        icon={Icon(when(destination){"Home"->Icons.Default.Home;"Explore"->Icons.Default.Explore;"Categories"->Icons.Default.Category;"Trending"->Icons.Default.TrendingUp;"New releases"->Icons.Default.NewReleases;"Community"->Icons.Default.Groups;"Inbox"->Icons.Default.Chat;"Notifications"->Icons.Default.Notifications;"Saved"->Icons.Default.Bookmark;"Downloads"->Icons.Default.Download;"Creator Studio"->Icons.Default.Upload;"My uploads"->Icons.Default.Folder;"Developer profile"->Icons.Default.Code;"Analytics"->Icons.Default.Analytics;"Account"->Icons.Default.Person;"Settings"->Icons.Default.Settings;"Help"->Icons.Default.HelpOutline;else->Icons.Default.Info},null)},
-       onClick={scope.launch { drawerState.close(); page=when(destination){"Creator Studio"->"Creator";"Categories","Trending","New releases"->"Explore";"My uploads","Developer profile","Analytics"->"Creator";else->destination};selected=null }}
+       onClick={scope.launch { drawerState.close(); page=when(destination){"Creator Studio"->"Creator";"Categories"->"Explore";"Trending"->{filter="Trending";"Explore"};"New releases"->{filter="New";"Explore"};"My uploads","Developer profile","Analytics"->"Creator";else->destination};selected=null }}
       )
      }
     }
@@ -217,10 +217,13 @@ fun ExploreScreen(listings:List<Listing>,query:String,onQuery:(String)->Unit,fil
  Column(Modifier.fillMaxSize().padding(16.dp)){
   OutlinedTextField(query,onQuery,Modifier.fillMaxWidth(),label={Text("Search BaltyGram")},leadingIcon={Icon(Icons.Default.Search,null)},singleLine=true)
   Row(horizontalArrangement=Arrangement.spacedBy(4.dp)){
-   listOf("All","game","software","app","ai","editing","developer").forEach{f->FilterChip(selected=filter.equals(f,true),onClick={onFilter(f)},label={Text(f.replaceFirstChar{it.uppercase()})})}
+   listOf("All","game","software","app","ai","editing","developer","Trending","New").forEach{f->FilterChip(selected=filter.equals(f,true),onClick={onFilter(f)},label={Text(f.replaceFirstChar{it.uppercase()})})}
   }
+  val filtered=listings.filter{(filter=="All"||filter=="Trending"||filter=="New"||it.type.contains(filter,true))&&(it.name.contains(query,true)||it.description.contains(query,true))}
+  val ordered=when(filter){"Trending"->filtered.sortedByDescending{it.downloads};"New"->filtered.sortedByDescending{it.createdAt};else->filtered}
   LazyColumn(verticalArrangement=Arrangement.spacedBy(8.dp)){
-   items(listings.filter{(filter=="All"||it.type.contains(filter,true))&&(it.name.contains(query,true)||it.description.contains(query,true))}){ListingCard(it){onOpen(it)}}
+   items(ordered){ListingCard(it){onOpen(it)}}
+   if(ordered.isEmpty()) item{Text("No matching listings. Try another category or search term.")}
   }
  }
 }

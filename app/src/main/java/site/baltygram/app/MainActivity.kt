@@ -20,6 +20,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
 data class Listing(val id:String,val name:String,val description:String,val type:String,val icon:String="",val versionId:String="",val externalUrl:String="",val views:Int=0,val downloads:Int=0,val createdAt:String="")
@@ -67,7 +69,7 @@ fun BaltyGramApp(openUrl:(String)->Unit,enqueueDownload:(Listing)->Unit){
  fun task(block:suspend()->Unit){
   scope.launch {
    busy=true; notice=""
-   try { block() } catch(e:Exception) { notice=e.message ?: "Something went wrong." }
+   try { withContext(Dispatchers.IO) { block() } } catch(e:Exception) { notice=e.message ?: "Something went wrong." }
    finally { busy=false }
   }
  }

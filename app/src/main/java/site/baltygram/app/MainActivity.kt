@@ -30,7 +30,11 @@ class MainActivity:ComponentActivity(){
  override fun onCreate(savedInstanceState:Bundle?){
   super.onCreate(savedInstanceState)
   SupabaseClient.init(applicationContext)
-  setContent { BaltyGramApp(openUrl={ url -> startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }, enqueueDownload={ item ->\n    val url=SupabaseClient.download(item)\n    val request=DownloadManager.Request(Uri.parse(url)).setTitle(item.name).setDescription("Downloading from BaltyGram").setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED).setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, item.name.replace(Regex("[^A-Za-z0-9._-]"),"_")+".download")\n    (getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager).enqueue(request)\n   } }
+  setContent { BaltyGramApp(openUrl={ url -> startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }, enqueueDownload={ item ->
+    val url=SupabaseClient.download(item)
+    val request=DownloadManager.Request(Uri.parse(url)).setTitle(item.name).setDescription("Downloading from BaltyGram").setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED).setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, item.name.replace(Regex("[^A-Za-z0-9._-]"),"_")+".download")
+    (getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager).enqueue(request)
+   } }
  }
 }
 
@@ -48,7 +52,8 @@ fun BaltyGramApp(openUrl:(String)->Unit,enqueueDownload:(Listing)->Unit){
  var filter by remember { mutableStateOf("All") }
  var email by remember { mutableStateOf(SupabaseClient.email()) }
  var loginEmail by remember { mutableStateOf("") }
- var password by remember { mutableStateOf("") }\n var showPassword by remember { mutableStateOf(false) }
+ var password by remember { mutableStateOf("") }
+ var showPassword by remember { mutableStateOf(false) }
  var displayName by remember { mutableStateOf("") }
  var notice by remember { mutableStateOf("") }
  var busy by remember { mutableStateOf(false) }

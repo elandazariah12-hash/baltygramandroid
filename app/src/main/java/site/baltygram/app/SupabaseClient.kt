@@ -60,6 +60,7 @@ object SupabaseClient {
  fun joinCommunity(id:String){request("/rest/v1/community_members","POST",JSONObject().put("community_id",id).put("user_id",userId()).put("role","member"))}
  private fun userId():String=obj("/auth/v1/user").optString("id")
  fun notifications():List<Notice>{if(access.isBlank())return emptyList();val a=arr("/rest/v1/notifications?select=id,title,body&order=created_at.desc&limit=30");return (0 until a.length()).map{val x=a.getJSONObject(it);Notice(x.optString("id"),x.optString("title"),x.optString("body"))}}
+ fun markAllNotificationsRead(){if(access.isBlank())throw IOException("Sign in to update notifications.");request("/rest/v1/notifications?read_at=is.null","PATCH",JSONObject().put("read_at",java.time.Instant.now().toString()))}
  fun inbox():List<JSONObject>{val a=arr("/rest/v1/dm_threads?select=id,user_a,user_b,last_message_at&order=last_message_at.desc&limit=50");return (0 until a.length()).map{a.getJSONObject(it)}}
  fun messages(id:String):List<JSONObject>{val a=arr("/rest/v1/messages?select=id,body,sender_id,created_at&dm_id=eq.$id&deleted_at=is.null&order=created_at.asc&limit=100");return (0 until a.length()).map{a.getJSONObject(it)}}
  fun sendMessage(id:String,body:String){request("/rest/v1/messages","POST",JSONObject().put("dm_id",id).put("sender_id",userId()).put("body",body))}

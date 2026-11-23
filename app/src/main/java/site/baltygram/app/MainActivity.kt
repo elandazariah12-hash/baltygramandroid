@@ -54,6 +54,7 @@ fun BaltyGramApp(openUrl:(String)->Unit){
  var chatId by remember { mutableStateOf("") }
  var chatText by remember { mutableStateOf("") }
  val scope= rememberCoroutineScope()
+ val drawerState = rememberDrawerState(DrawerValue.Closed)
 
  fun task(block:suspend()->Unit){
   scope.launch {
@@ -78,10 +79,31 @@ fun BaltyGramApp(openUrl:(String)->Unit){
   colorScheme=if(dark) darkColorScheme(primary=androidx.compose.ui.graphics.Color(0xFF10B981),secondary=androidx.compose.ui.graphics.Color(0xFF6EE7B7))
   else lightColorScheme(primary=androidx.compose.ui.graphics.Color(0xFF059669),secondary=androidx.compose.ui.graphics.Color(0xFF10B981))
  ){
+  ModalNavigationDrawer(
+   drawerState=drawerState,
+   drawerContent={
+    ModalDrawerSheet {
+     Column(Modifier.fillMaxWidth().padding(20.dp)) {
+      Text("BaltyGram",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold)
+      Text("Discover. Download. Connect.",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+     }
+     HorizontalDivider()
+     listOf("Home","Explore","Categories","Trending","New releases","Community","Inbox","Notifications","Saved","Downloads","Creator Studio","My uploads","Developer profile","Analytics","Account","Settings","Help","About").forEach { destination ->
+      NavigationDrawerItem(
+       label={Text(destination)},
+       selected=page==destination || (destination=="Creator Studio" && page=="Creator"),
+       icon={Icon(when(destination){"Home"->Icons.Default.Home;"Explore"->Icons.Default.Explore;"Categories"->Icons.Default.Category;"Trending"->Icons.Default.TrendingUp;"New releases"->Icons.Default.NewReleases;"Community"->Icons.Default.Groups;"Inbox"->Icons.Default.Chat;"Notifications"->Icons.Default.Notifications;"Saved"->Icons.Default.Bookmark;"Downloads"->Icons.Default.Download;"Creator Studio"->Icons.Default.Upload;"My uploads"->Icons.Default.Folder;"Developer profile"->Icons.Default.Code;"Analytics"->Icons.Default.Analytics;"Account"->Icons.Default.Person;"Settings"->Icons.Default.Settings;"Help"->Icons.Default.HelpOutline;else->Icons.Default.Info},null)},
+       onClick={scope.launch { drawerState.close(); page=when(destination){"Creator Studio"->"Creator";"Categories","Trending","New releases"->"Explore";"My uploads","Developer profile","Analytics"->"Creator";else->destination};selected=null }}
+      )
+     }
+    }
+   }
+  ) {
   Scaffold(
    topBar={
     TopAppBar(
      title={Text("BaltyGram",fontWeight=FontWeight.Bold)},
+     navigationIcon={IconButton(onClick={scope.launch { drawerState.open() }}){Icon(Icons.Default.Menu,"Open navigation menu")}},
      actions={
       IconButton(onClick={dark=!dark}){Icon(if(dark) Icons.Default.LightMode else Icons.Default.DarkMode,"Theme")}
       IconButton(onClick={page="Notifications";task{notices=SupabaseClient.notifications()}}){
@@ -93,11 +115,11 @@ fun BaltyGramApp(openUrl:(String)->Unit){
    },
    bottomBar={
     NavigationBar {
-     listOf("Home","Explore","Community","Inbox","Saved","Account").forEach { p ->
+     listOf("Home","Explore","Community","Account").forEach { p ->
       NavigationBarItem(
        selected=page==p,
        onClick={page=p;selected=null},
-       icon={Icon(when(p){"Home"->Icons.Default.Home;"Explore"->Icons.Default.Explore;"Community"->Icons.Default.Groups;"Inbox"->Icons.Default.Chat;"Saved"->Icons.Default.Bookmark;else->Icons.Default.Person},p)},
+       icon={Icon(when(p){"Home"->Icons.Default.Home;"Explore"->Icons.Default.Explore;"Community"->Icons.Default.Groups;else->Icons.Default.Person},p)},
        label={Text(p)}
       )
      }
@@ -147,11 +169,24 @@ fun BaltyGramApp(openUrl:(String)->Unit){
        onCreator={page="Creator"}
       )
       "Creator" -> CreatorScreen(openUrl)
+      "Downloads" -> InfoScreen("Downloads","Your downloaded files will be listed here. A persistent download manager is not connected in this build.")
+      "Settings" -> InfoScreen("Settings","Theme controls are available from the top bar. Account and privacy settings remain tied to your BaltyGram account.")
+      "Help" -> InfoScreen("Help","Visit baltygram.site for support and platform information.")
+      "About" -> InfoScreen("About BaltyGram","A digital discovery platform for games, apps, software and developer tools.")
       else -> HomeScreen(listings,onOpen={selected=it},onExplore={page="Explore"})
      }
     }
    }
   }
+  }
+ }
+}
+
+@Composable
+fun InfoScreen(title:String,description:String){
+ Column(Modifier.fillMaxSize().padding(24.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
+  Text(title,style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Bold)
+  Text(description,color=MaterialTheme.colorScheme.onSurfaceVariant)
  }
 }
 
